@@ -25,7 +25,17 @@
           <p>Пистолет: <span id="gun-state">нет</span></p>
           <p>Пули: <span id="ammo-count">0</span></p>
           <p>Управление: WASD/стрелки, E, Пробел</p>
+          <p>Дерево: <span id="wood-counter">0</span></p>
+          <p>Еда: <span id="food-counter">0</span></p>
+          <p>Металл: <span id="metal-counter">0</span></p>
+          <p>Управление: WASD или стрелки</p>
+          <div class="hud-controls">
+            <button id="pause-button" type="button">Пауза</button>
+            <button id="restart-button" type="button">Рестарт</button>
+          </div>
         </header>
+
+        <p id="murlik-hint" class="hint" aria-live="polite">Мурлик: Собери припасы и держись ближе к бункеру.</p>
         <p id="status-message" class="status-message" aria-live="polite"></p>
 
         <section id="craft-menu" class="craft-menu hidden" aria-live="polite">
@@ -37,6 +47,8 @@
           <button id="craft-close" type="button">Закрыть</button>
         </section>
 
+        <div id="siren-alert" class="siren-alert hidden" aria-live="assertive">🚨 СИРЕНА! БЕГИ В БУНКЕР! 🚨</div>
+        <div id="siren-flash" class="siren-flash hidden" aria-hidden="true"></div>
         <canvas id="game-canvas" width="640" height="400" aria-label="Игровое поле"></canvas>
       </section>
     </main>

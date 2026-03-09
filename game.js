@@ -2,7 +2,10 @@ const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const startButton = document.getElementById('start-button');
 
+const pauseButton = document.getElementById('pause-button');
+const restartButton = document.getElementById('restart-button');
 const dayCounter = document.getElementById('day-counter');
+const hintText = document.getElementById('murlik-hint');
 const dayTime = document.getElementById('day-time');
 const woodCount = document.getElementById('wood-count');
 const metalCount = document.getElementById('metal-count');
@@ -17,12 +20,25 @@ const craftGunButton = document.getElementById('craft-gun');
 const craftAmmoButton = document.getElementById('craft-ammo');
 const craftCloseButton = document.getElementById('craft-close');
 
+const woodCounter = document.getElementById('wood-counter');
+const foodCounter = document.getElementById('food-counter');
+const metalCounter = document.getElementById('metal-counter');
 const statusMessage = document.getElementById('status-message');
+const sirenAlert = document.getElementById('siren-alert');
+const sirenFlash = document.getElementById('siren-flash');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
 const keys = {};
 const DAY_DURATION = 20;
+
+const murlikHints = [
+  'Мурлик: Собери припасы и держись ближе к бункеру.',
+  'Мурлик: В лесу тише, но после сирены там опаснее.',
+  'Мурлик: Если устал — жми «Пауза», я подожду.',
+  'Мурлик: Говорят, сирена включается сама, когда небо краснеет.',
+  'Мурлик: Последний день близко. Не отходи далеко от укрытия.',
+];
 const MAX_DAYS = 5;
 
 const mapZones = {
@@ -33,8 +49,11 @@ const mapZones = {
 
 const gameState = {
   running: false,
+  paused: false,
   lastTime: 0,
   day: 1,
+  dayTimer: 0,
+  hintTimer: 0,
   dayProgress: 0,
   sirenStarted: false,
   zombies: [],
@@ -43,6 +62,12 @@ const gameState = {
   spawnTimer: 0,
   craftingOpen: false,
   nearWorkbench: false,
+  resources: {
+    wood: 0,
+    food: 0,
+    metal: 0,
+  },
+  pickups: [],
   player: {
     x: 80,
     y: 300,
@@ -70,14 +95,57 @@ function createResourceNodes() {
   ];
 }
 
+function resetGameState() {
 function startGame() {
   resetGame();
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
   gameState.running = true;
+  gameState.paused = false;
   gameState.lastTime = performance.now();
+  gameState.day = 1;
+  gameState.dayTimer = 0;
+  gameState.hintTimer = 0;
+  gameState.player.x = 80;
+  gameState.player.y = 300;
+
+  dayCounter.textContent = String(gameState.day);
+  hintText.textContent = murlikHints[0];
+  pauseButton.textContent = 'Пауза';
+  gameScreen.classList.remove('is-paused');
+}
+
+function startGame() {
+  startScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  resetGameState();
+  requestAnimationFrame(gameLoop);
+}
+
+function restartGame() {
+  resetGameState();
+  draw();
+}
+
+function togglePause() {
+  if (!gameState.running) return;
+
+  gameState.paused = !gameState.paused;
+
+  if (gameState.paused) {
+    pauseButton.textContent = 'Продолжить';
+    gameScreen.classList.add('is-paused');
+    hintText.textContent = 'Мурлик: Время замерло. Нажми «Продолжить», когда будешь готов.';
+    return;
+  }
+
+  pauseButton.textContent = 'Пауза';
+  gameScreen.classList.remove('is-paused');
+  gameState.lastTime = performance.now();
+  updateHintByDay();
   updateHud();
   setMessage('Собирай ресурсы в лесу и деревне. Подготовься до Сирены.');
+  statusMessage.textContent = 'Собирай ресурсы и держись ближе к бункеру.';
   requestAnimationFrame(gameLoop);
 }
 
@@ -109,6 +177,51 @@ function update(deltaTime) {
     updatePlayerMovement(deltaTime);
   }
 
+  gameState.resources.wood = 0;
+  gameState.resources.food = 0;
+  gameState.resources.metal = 0;
+  gameState.pickups = createPickups();
+  gameState.player.x = 80;
+  gameState.player.y = 300;
+  sirenAlert.classList.add('hidden');
+  sirenFlash.classList.add('hidden');
+  sirenFlash.classList.remove('active');
+}
+
+function createPickups() {
+  return [
+    { x: 70, y: 40, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 145, y: 78, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 230, y: 95, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 535, y: 250, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 500, y: 315, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 585, y: 340, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 220, y: 300, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
+    { x: 440, y: 200, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
+  ];
+}
+
+function update(deltaTime) {
+  const moveSpeed = gameState.player.speed * deltaTime;
+
+  if (keys.w || keys.arrowup) {
+    gameState.player.y -= moveSpeed;
+  }
+  if (keys.s || keys.arrowdown) {
+    gameState.player.y += moveSpeed;
+  }
+  if (keys.a || keys.arrowleft) {
+    gameState.player.x -= moveSpeed;
+  }
+  if (keys.d || keys.arrowright) {
+    gameState.player.x += moveSpeed;
+  if (keys.w || keys.arrowup) gameState.player.y -= moveSpeed;
+  if (keys.s || keys.arrowdown) gameState.player.y += moveSpeed;
+  if (keys.a || keys.arrowleft) gameState.player.x -= moveSpeed;
+  if (keys.d || keys.arrowright) gameState.player.x += moveSpeed;
+
+  keepPlayerOnMap();
+  collectPickups();
   updateDayTimer(deltaTime);
   collectResources();
   updateWorkbenchHint();
@@ -142,6 +255,23 @@ function updatePlayerMovement(deltaTime) {
   }
 
   keepPlayerOnMap();
+function collectPickups() {
+  for (let i = gameState.pickups.length - 1; i >= 0; i -= 1) {
+    const pickup = gameState.pickups[i];
+
+    if (isColliding(gameState.player, pickup)) {
+      gameState.resources[pickup.type] += 1;
+      gameState.pickups.splice(i, 1);
+      statusMessage.textContent = `Собрано: ${getResourceName(pickup.type)}.`;
+      updateHud();
+    }
+  }
+}
+
+function getResourceName(type) {
+  if (type === 'wood') return 'дерево';
+  if (type === 'food') return 'еда';
+  return 'металл';
 }
 
 function updateDayTimer(deltaTime) {
@@ -384,6 +514,9 @@ function isOutOfMap(entity) {
     entity.y + entity.height < 0 ||
     entity.y > canvas.height
   );
+  woodCounter.textContent = String(gameState.resources.wood);
+  foodCounter.textContent = String(gameState.resources.food);
+  metalCounter.textContent = String(gameState.resources.metal);
 }
 
 function startSiren() {
@@ -391,6 +524,48 @@ function startSiren() {
 
   gameState.sirenStarted = true;
   setMessage('🚨 СИРЕНА! Зомби идут. Держись в бункере и отбивайся.');
+  statusMessage.textContent = '🚨 СИРЕНА! Беги в бункер и избегай зомби!';
+  sirenAlert.classList.remove('hidden');
+  sirenFlash.classList.remove('hidden');
+  sirenFlash.classList.add('active');
+  playSirenSound();
+
+  setTimeout(() => {
+    sirenAlert.classList.add('hidden');
+  }, 2500);
+
+  setTimeout(() => {
+    sirenFlash.classList.add('hidden');
+    sirenFlash.classList.remove('active');
+  }, 1800);
+}
+
+function playSirenSound() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) return;
+
+  const audioContext = new AudioContextClass();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(520, audioContext.currentTime);
+  oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 0.3);
+  oscillator.frequency.linearRampToValueAtTime(520, audioContext.currentTime + 0.6);
+
+  gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.65);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.65);
+
+  oscillator.onended = () => {
+    audioContext.close();
+  };
 }
 
 function updateZombies(deltaTime) {
@@ -408,6 +583,32 @@ function updateZombies(deltaTime) {
 
     zombie.x += (dx / distance) * zombie.speed * deltaTime;
     zombie.y += (dy / distance) * zombie.speed * deltaTime;
+
+    keepZombieOutOfBunker(zombie);
+  }
+}
+
+function keepZombieOutOfBunker(zombie) {
+  if (!isColliding(zombie, gameState.bunker)) return;
+
+  const bunkerCenterX = gameState.bunker.x + gameState.bunker.width / 2;
+  const bunkerCenterY = gameState.bunker.y + gameState.bunker.height / 2;
+  const zombieCenterX = zombie.x + zombie.width / 2;
+  const zombieCenterY = zombie.y + zombie.height / 2;
+
+  const dx = zombieCenterX - bunkerCenterX;
+  const dy = zombieCenterY - bunkerCenterY;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0) {
+      zombie.x = gameState.bunker.x + gameState.bunker.width;
+    } else {
+      zombie.x = gameState.bunker.x - zombie.width;
+    }
+  } else if (dy > 0) {
+    zombie.y = gameState.bunker.y + gameState.bunker.height;
+  } else {
+    zombie.y = gameState.bunker.y - zombie.height;
   }
 }
 
@@ -455,6 +656,35 @@ function setMessage(text) {
   statusMessage.textContent = text;
 }
 
+  keepPlayerOnMap();
+  updateDayProgress(deltaTime);
+  updateHintRotation(deltaTime);
+}
+
+function updateDayProgress(deltaTime) {
+  if (gameState.day >= 5) return;
+
+  gameState.dayTimer += deltaTime;
+  if (gameState.dayTimer < DAY_DURATION) return;
+
+  gameState.day += 1;
+  gameState.dayTimer = 0;
+  dayCounter.textContent = String(gameState.day);
+  updateHintByDay();
+}
+
+function updateHintRotation(deltaTime) {
+  gameState.hintTimer += deltaTime;
+
+  if (gameState.hintTimer < 8) return;
+
+  gameState.hintTimer = 0;
+  updateHintByDay();
+}
+
+function updateHintByDay() {
+  const hintIndex = Math.min(gameState.day - 1, murlikHints.length - 1);
+  hintText.textContent = murlikHints[hintIndex];
 function isColliding(a, b) {
   return (
     a.x < b.x + b.width &&
@@ -480,6 +710,12 @@ function draw() {
   drawWorkbench();
   drawTyunya();
   drawBullets();
+  drawPickups();
+  drawTyunya();
+
+  if (gameState.paused) {
+    drawPauseOverlay();
+  }
   drawZombies();
   drawHitEffects();
 }
@@ -499,7 +735,7 @@ function drawMap() {
   ctx.fillRect(70, 300, 60, 70);
 
   if (gameState.sirenStarted) {
-    ctx.fillStyle = 'rgba(180, 30, 30, 0.35)';
+    ctx.fillStyle = 'rgba(180, 30, 30, 0.25)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 }
@@ -532,6 +768,14 @@ function drawWorkbench() {
     ctx.strokeStyle = '#d9e3ff';
     ctx.lineWidth = 2;
     ctx.strokeRect(x, y, width, height);
+function drawPickups() {
+  for (const pickup of gameState.pickups) {
+    ctx.fillStyle = pickup.color;
+    ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
+
+    ctx.fillStyle = '#1f2230';
+    ctx.font = '10px Arial';
+    ctx.fillText(pickup.label, pickup.x + 3, pickup.y + 10);
   }
 }
 
@@ -557,6 +801,13 @@ function drawBullets() {
   }
 }
 
+function drawPauseOverlay() {
+  ctx.fillStyle = 'rgba(18, 24, 36, 0.45)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '24px Arial';
+  ctx.fillText('Пауза', canvas.width / 2 - 45, canvas.height / 2);
 function drawZombies() {
   for (const zombie of gameState.zombies) {
     ctx.fillStyle = '#7ce38b';
@@ -585,9 +836,11 @@ function gameLoop(currentTime) {
   const deltaTime = (currentTime - gameState.lastTime) / 1000;
   gameState.lastTime = currentTime;
 
-  update(deltaTime);
-  draw();
+  if (!gameState.paused) {
+    update(deltaTime);
+  }
 
+  draw();
   requestAnimationFrame(gameLoop);
 }
 
@@ -608,6 +861,10 @@ function handleKeyDown(event) {
   if (event.code === 'Space') {
     event.preventDefault();
     shoot();
+  keys[event.key.toLowerCase()] = true;
+
+  if (event.key.toLowerCase() === 'p') {
+    togglePause();
   }
 }
 
@@ -620,5 +877,7 @@ craftWorkbenchButton.addEventListener('click', craftWorkbench);
 craftGunButton.addEventListener('click', craftGun);
 craftAmmoButton.addEventListener('click', craftAmmo);
 craftCloseButton.addEventListener('click', closeCraftingMenu);
+pauseButton.addEventListener('click', togglePause);
+restartButton.addEventListener('click', restartGame);
 window.addEventListener('keydown', handleKeyDown);
 window.addEventListener('keyup', handleKeyUp);
