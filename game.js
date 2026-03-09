@@ -209,41 +209,8 @@ function keepPlayerOnMap() {
   if (gameState.player.y > maxY) gameState.player.y = maxY;
 }
 
-function collectResources() {
-  const player = gameState.player;
-
-  gameState.pickups = gameState.pickups.filter((pickup) => {
-    if (isTouching(player, pickup)) {
-      gameState.resources[pickup.type] += 1;
-      updateHud();
-      return false;
-    }
-
-    return true;
-  });
-}
-
-function isTouching(player, pickup) {
-  const pickupSize = 18;
-
-  return (
-    player.x < pickup.x + pickupSize &&
-    player.x + player.width > pickup.x &&
-    player.y < pickup.y + pickupSize &&
-    player.y + player.height > pickup.y
-  );
-}
-
-function updateHud() {
-  dayCounter.textContent = String(gameState.day);
-  woodCounter.textContent = String(gameState.resources.wood);
-  foodCounter.textContent = String(gameState.resources.food);
-  metalCounter.textContent = String(gameState.resources.metal);
-}
-
 function draw() {
   drawMap();
-  drawResources();
   drawTyunya();
   drawZombies();
 }
