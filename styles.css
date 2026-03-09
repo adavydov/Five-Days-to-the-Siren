@@ -36,20 +36,27 @@ h1 {
 button {
   background: #ffd65a;
   color: #1f2230;
-  font-size: 18px;
+  font-size: 16px;
   border: none;
   border-radius: 8px;
-  padding: 10px 18px;
+  padding: 9px 14px;
   cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.2s ease;
 }
 
 button:hover {
   background: #ffdf7b;
+  transform: translateY(-1px);
+}
+
+button:active {
+  transform: translateY(0);
 }
 
 .hud {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
   margin-bottom: 10px;
@@ -57,6 +64,26 @@ button:hover {
 
 .hud p {
   margin: 0;
+}
+
+.hud-controls {
+  display: flex;
+  gap: 8px;
+}
+
+.hint {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(127, 150, 203, 0.22);
+  border: 1px solid rgba(171, 193, 243, 0.35);
+  animation: hintPulse 2.2s ease-in-out infinite;
+}
+
+#day-counter {
+  display: inline-block;
+  min-width: 16px;
+  animation: dayPop 0.5s ease;
 }
 
 #game-canvas {
@@ -68,6 +95,29 @@ button:hover {
   image-rendering: pixelated;
 }
 
+.is-paused #game-canvas {
+  filter: saturate(0.75) brightness(0.9);
+}
+
 .hidden {
   display: none;
+}
+
+@keyframes hintPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 rgba(173, 197, 255, 0);
+  }
+  50% {
+    box-shadow: 0 0 12px rgba(173, 197, 255, 0.35);
+  }
+}
+
+@keyframes dayPop {
+  0% {
+    transform: scale(0.8);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
