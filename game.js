@@ -12,11 +12,11 @@ const foodCount = document.getElementById('food-count');
 const ammoCount = document.getElementById('ammo-count');
 const workbenchState = document.getElementById('workbench-state');
 const gunState = document.getElementById('gun-state');
-const ammoCount = document.getElementById('ammo-count');
 const hintText = document.getElementById('murlik-hint');
 const statusMessage = document.getElementById('status-message');
 
 const craftMenu = document.getElementById('craft-menu');
+const craftWorkbenchButton = document.getElementById('craft-workbench');
 const craftGunButton = document.getElementById('craft-gun');
 const craftAmmoButton = document.getElementById('craft-ammo');
 const craftCloseButton = document.getElementById('craft-close');
@@ -135,7 +135,7 @@ function resetGameState() {
 function startGame() {
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
-  resetGame();
+  resetGameState();
   requestAnimationFrame(gameLoop);
 }
 
@@ -298,13 +298,16 @@ function updateWorkbenchHint() {
 function openCraftingMenu() {
   if (!gameState.running || !gameState.nearWorkbench) return;
 
-  updateNearbyFlags();
+  gameState.craftingOpen = true;
+  craftMenu.classList.remove('hidden');
+  refreshCraftButtons();
 
   if (gameState.inventory.hasWorkbench) {
     setMessage('Выбери крафт.');
   } else {
     setMessage('Сначала собери верстак.');
   }
+}
 
 function closeCraftingMenu() {
   gameState.craftingOpen = false;
@@ -330,16 +333,24 @@ function craftWorkbench() {
   gameState.resources.wood -= 3;
   gameState.resources.metal -= 1;
   gameState.inventory.hasWorkbench = true;
-  setMessage('Верстак готов.');
   updateHud();
+  refreshCraftButtons();
   setMessage('Верстак собран. Подойди ближе и нажми E.');
 }
 
 function toggleCraftMenu() {
-  gameState.craftingOpen = !gameState.craftingOpen;
-  craftMenu.classList.toggle('hidden', !gameState.craftingOpen);
-  if (gameState.craftingOpen) {
-    setMessage('Верстак открыт. Выбери действие.');
+  if (!gameState.craftingOpen) {
+    openCraftingMenu();
+    return;
+  }
+
+  closeCraftingMenu();
+}
+
+function craftGun() {
+  if (!gameState.inventory.hasWorkbench) {
+    setMessage('Сначала собери верстак.');
+    return;
   }
   if (gameState.inventory.hasGun) {
     setMessage('Пистолет уже собран.');
@@ -353,8 +364,8 @@ function toggleCraftMenu() {
   gameState.resources.wood -= 1;
   gameState.resources.metal -= 3;
   gameState.inventory.hasGun = true;
-  setMessage('Пистолет собран!');
   updateHud();
+  refreshCraftButtons();
   setMessage('Пистолет готов. Теперь сделай пули.');
 }
 
@@ -370,9 +381,13 @@ function craftAmmo() {
 
   gameState.resources.metal -= 1;
   gameState.inventory.ammo += 6;
-  setMessage('Пули: +6.');
   updateHud();
   setMessage('Пули сделаны: +6.');
+}
+
+function handleInteract() {
+  if (!gameState.running || !gameState.nearWorkbench) return;
+  toggleCraftMenu();
 }
 
 function shoot() {
