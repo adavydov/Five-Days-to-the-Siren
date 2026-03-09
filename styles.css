@@ -66,6 +66,35 @@ button:hover {
   color: #ffe17d;
 }
 
+.siren-alert {
+  margin: 0 0 10px;
+  padding: 12px;
+  border: 2px solid #ff9292;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  background: #b10d0d;
+  animation: pulse-alert 0.6s linear 4;
+}
+
+.siren-flash {
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 0, 0, 0.25);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.siren-flash.active {
+  animation: flash-red 0.25s linear 6;
+}
+
+#game-screen {
+  position: relative;
+}
+
 #game-canvas {
   width: 100%;
   height: auto;
@@ -77,4 +106,25 @@ button:hover {
 
 .hidden {
   display: none;
+}
+
+@keyframes flash-red {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pulse-alert {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
 }

@@ -3,7 +3,12 @@ const gameScreen = document.getElementById('game-screen');
 const startButton = document.getElementById('start-button');
 const dayCounter = document.getElementById('day-counter');
 const dayTime = document.getElementById('day-time');
+const woodCounter = document.getElementById('wood-counter');
+const foodCounter = document.getElementById('food-counter');
+const metalCounter = document.getElementById('metal-counter');
 const statusMessage = document.getElementById('status-message');
+const sirenAlert = document.getElementById('siren-alert');
+const sirenFlash = document.getElementById('siren-flash');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
@@ -46,6 +51,12 @@ const gameState = {
   sirenStarted: false,
   zombies: [],
   spawnTimer: 0,
+  resources: {
+    wood: 0,
+    food: 0,
+    metal: 0,
+  },
+  pickups: [],
   player: {
     x: 80,
     y: 300,
@@ -68,7 +79,7 @@ function startGame() {
   gameState.running = true;
   gameState.lastTime = performance.now();
   updateHud();
-  statusMessage.textContent = 'Собирайся и держись ближе к бункеру.';
+  statusMessage.textContent = 'Собирай ресурсы и держись ближе к бункеру.';
   requestAnimationFrame(gameLoop);
 }
 
@@ -78,8 +89,28 @@ function resetGame() {
   gameState.sirenStarted = false;
   gameState.zombies = [];
   gameState.spawnTimer = 0;
+  gameState.resources.wood = 0;
+  gameState.resources.food = 0;
+  gameState.resources.metal = 0;
+  gameState.pickups = createPickups();
   gameState.player.x = 80;
   gameState.player.y = 300;
+  sirenAlert.classList.add('hidden');
+  sirenFlash.classList.add('hidden');
+  sirenFlash.classList.remove('active');
+}
+
+function createPickups() {
+  return [
+    { x: 70, y: 40, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 145, y: 78, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 230, y: 95, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
+    { x: 535, y: 250, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 500, y: 315, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 585, y: 340, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
+    { x: 220, y: 300, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
+    { x: 440, y: 200, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
+  ];
 }
 
 function update(deltaTime) {
@@ -91,12 +122,32 @@ function update(deltaTime) {
   if (keys.d || keys.arrowright) gameState.player.x += moveSpeed;
 
   keepPlayerOnMap();
+  collectPickups();
   updateDayTimer(deltaTime);
 
   if (gameState.sirenStarted) {
     updateZombies(deltaTime);
     checkLoseState();
   }
+}
+
+function collectPickups() {
+  for (let i = gameState.pickups.length - 1; i >= 0; i -= 1) {
+    const pickup = gameState.pickups[i];
+
+    if (isColliding(gameState.player, pickup)) {
+      gameState.resources[pickup.type] += 1;
+      gameState.pickups.splice(i, 1);
+      statusMessage.textContent = `Собрано: ${getResourceName(pickup.type)}.`;
+      updateHud();
+    }
+  }
+}
+
+function getResourceName(type) {
+  if (type === 'wood') return 'дерево';
+  if (type === 'food') return 'еда';
+  return 'металл';
 }
 
 function updateDayTimer(deltaTime) {
@@ -124,6 +175,9 @@ function updateHud() {
   const timeLeft = Math.max(0, Math.ceil(DAY_DURATION - gameState.dayProgress));
   dayCounter.textContent = String(currentDay);
   dayTime.textContent = String(timeLeft);
+  woodCounter.textContent = String(gameState.resources.wood);
+  foodCounter.textContent = String(gameState.resources.food);
+  metalCounter.textContent = String(gameState.resources.metal);
 }
 
 function startSiren() {
@@ -131,6 +185,47 @@ function startSiren() {
 
   gameState.sirenStarted = true;
   statusMessage.textContent = '🚨 СИРЕНА! Беги в бункер и избегай зомби!';
+  sirenAlert.classList.remove('hidden');
+  sirenFlash.classList.remove('hidden');
+  sirenFlash.classList.add('active');
+  playSirenSound();
+
+  setTimeout(() => {
+    sirenAlert.classList.add('hidden');
+  }, 2500);
+
+  setTimeout(() => {
+    sirenFlash.classList.add('hidden');
+    sirenFlash.classList.remove('active');
+  }, 1800);
+}
+
+function playSirenSound() {
+  const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+  if (!AudioContextClass) return;
+
+  const audioContext = new AudioContextClass();
+  const oscillator = audioContext.createOscillator();
+  const gainNode = audioContext.createGain();
+
+  oscillator.type = 'sawtooth';
+  oscillator.frequency.setValueAtTime(520, audioContext.currentTime);
+  oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 0.3);
+  oscillator.frequency.linearRampToValueAtTime(520, audioContext.currentTime + 0.6);
+
+  gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.65);
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioContext.destination);
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + 0.65);
+
+  oscillator.onended = () => {
+    audioContext.close();
+  };
 }
 
 function updateZombies(deltaTime) {
@@ -148,6 +243,32 @@ function updateZombies(deltaTime) {
 
     zombie.x += (dx / distance) * zombie.speed * deltaTime;
     zombie.y += (dy / distance) * zombie.speed * deltaTime;
+
+    keepZombieOutOfBunker(zombie);
+  }
+}
+
+function keepZombieOutOfBunker(zombie) {
+  if (!isColliding(zombie, gameState.bunker)) return;
+
+  const bunkerCenterX = gameState.bunker.x + gameState.bunker.width / 2;
+  const bunkerCenterY = gameState.bunker.y + gameState.bunker.height / 2;
+  const zombieCenterX = zombie.x + zombie.width / 2;
+  const zombieCenterY = zombie.y + zombie.height / 2;
+
+  const dx = zombieCenterX - bunkerCenterX;
+  const dy = zombieCenterY - bunkerCenterY;
+
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 0) {
+      zombie.x = gameState.bunker.x + gameState.bunker.width;
+    } else {
+      zombie.x = gameState.bunker.x - zombie.width;
+    }
+  } else if (dy > 0) {
+    zombie.y = gameState.bunker.y + gameState.bunker.height;
+  } else {
+    zombie.y = gameState.bunker.y - zombie.height;
   }
 }
 
@@ -211,6 +332,7 @@ function keepPlayerOnMap() {
 
 function draw() {
   drawMap();
+  drawPickups();
   drawTyunya();
   drawZombies();
 }
@@ -230,8 +352,19 @@ function drawMap() {
   ctx.fillRect(70, 300, 60, 70);
 
   if (gameState.sirenStarted) {
-    ctx.fillStyle = 'rgba(180, 30, 30, 0.35)';
+    ctx.fillStyle = 'rgba(180, 30, 30, 0.25)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+  }
+}
+
+function drawPickups() {
+  for (const pickup of gameState.pickups) {
+    ctx.fillStyle = pickup.color;
+    ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
+
+    ctx.fillStyle = '#1f2230';
+    ctx.font = '10px Arial';
+    ctx.fillText(pickup.label, pickup.x + 3, pickup.y + 10);
   }
 }
 
