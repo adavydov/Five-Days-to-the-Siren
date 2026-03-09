@@ -17,15 +17,14 @@ body {
 }
 
 .app {
-  width: min(92vw, 720px);
+  width: min(92vw, 760px);
 }
 
-.panel,
-#game-screen {
+.panel {
   background: #283248;
   border: 2px solid #50638e;
   border-radius: 12px;
-  padding: 20px;
+  padding: 16px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
@@ -36,38 +35,48 @@ h1 {
 button {
   background: #ffd65a;
   color: #1f2230;
-  font-size: 16px;
+  font-size: 15px;
   border: none;
   border-radius: 8px;
-  padding: 10px 14px;
-  padding: 9px 14px;
+  padding: 8px 12px;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.2s ease;
 }
 
 button:hover {
   background: #ffdf7b;
-  transform: translateY(-1px);
 }
 
-button:active {
-  transform: translateY(0);
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .hud {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
-  gap: 8px 12px;
+  margin-bottom: 8px;
+  padding: 10px;
+  border: 1px solid rgba(171, 193, 243, 0.35);
+  border-radius: 8px;
+  background: rgba(127, 150, 203, 0.16);
+}
+
+.hud-row {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 10px;
+  align-items: center;
+}
+
+.hud-row + .hud-row {
+  margin-top: 6px;
 }
 
 .hud p {
   margin: 0;
+  font-size: 14px;
+}
+
+.hud-row-bottom {
+  justify-content: space-between;
 }
 
 .hud-controls {
@@ -75,66 +84,47 @@ button:active {
   gap: 8px;
 }
 
-.hint {
-  margin: 0 0 10px;
-  padding: 8px 10px;
+.hint,
+.status-message {
+  margin: 0 0 8px;
+  min-height: 24px;
+  padding: 6px 10px;
   border-radius: 8px;
-  background: rgba(127, 150, 203, 0.22);
-  border: 1px solid rgba(171, 193, 243, 0.35);
-  animation: hintPulse 2.2s ease-in-out infinite;
 }
 
-#day-counter {
-  display: inline-block;
-  min-width: 16px;
-  animation: dayPop 0.5s ease;
+.hint {
+  background: rgba(127, 150, 203, 0.22);
+  border: 1px solid rgba(171, 193, 243, 0.35);
+}
+
 .status-message {
-  min-height: 24px;
-  margin: 0 0 10px;
-  font-weight: bold;
   color: #ffe17d;
 }
 
 .craft-menu {
-  margin-bottom: 10px;
-  padding: 12px;
-  border: 2px solid #7f96cb;
+  width: min(380px, 100%);
+  margin: 0 0 8px;
+  padding: 10px;
+  border: 1px solid #7f96cb;
   border-radius: 8px;
   background: #1e2636;
   display: grid;
   gap: 8px;
 }
 
-.craft-menu h2,
-.craft-menu p {
+.craft-menu h2 {
   margin: 0;
+  font-size: 18px;
+}
+
 .siren-alert {
-  margin: 0 0 10px;
-  padding: 12px;
-  border: 2px solid #ff9292;
+  margin: 0 0 8px;
+  padding: 8px;
   border-radius: 8px;
   text-align: center;
-  font-size: 28px;
   font-weight: bold;
   color: #fff;
   background: #b10d0d;
-  animation: pulse-alert 0.6s linear 4;
-}
-
-.siren-flash {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 0, 0, 0.25);
-  pointer-events: none;
-  opacity: 0;
-}
-
-.siren-flash.active {
-  animation: flash-red 0.25s linear 6;
-}
-
-#game-screen {
-  position: relative;
 }
 
 #game-canvas {
@@ -146,48 +136,6 @@ button:active {
   image-rendering: pixelated;
 }
 
-.is-paused #game-canvas {
-  filter: saturate(0.75) brightness(0.9);
-}
-
 .hidden {
   display: none;
-}
-
-@keyframes hintPulse {
-  0%,
-  100% {
-    box-shadow: 0 0 0 rgba(173, 197, 255, 0);
-  }
-  50% {
-    box-shadow: 0 0 12px rgba(173, 197, 255, 0.35);
-  }
-}
-
-@keyframes dayPop {
-  0% {
-    transform: scale(0.8);
-  }
-  100% {
-    transform: scale(1);
-  }
-@keyframes flash-red {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes pulse-alert {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.03);
-  }
 }
