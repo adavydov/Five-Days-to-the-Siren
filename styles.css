@@ -59,6 +59,13 @@ button:hover {
   margin: 0;
 }
 
+.status-message {
+  min-height: 24px;
+  margin: 0 0 10px;
+  font-weight: bold;
+  color: #ffe17d;
+}
+
 #game-canvas {
   width: 100%;
   height: auto;
