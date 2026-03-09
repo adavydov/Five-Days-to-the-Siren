@@ -11,6 +11,33 @@ const keys = {};
 const DAY_DURATION = 20;
 const MAX_DAYS = 5;
 
+const mapZones = {
+  forest: {
+    name: 'Лес',
+    x: 0,
+    y: 0,
+    width: 640,
+    height: 130,
+    color: '#4d7f42',
+  },
+  village: {
+    name: 'Деревня',
+    x: 430,
+    y: 210,
+    width: 210,
+    height: 190,
+    color: '#c9b180',
+  },
+  bunker: {
+    name: 'Бункер',
+    x: 20,
+    y: 240,
+    width: 180,
+    height: 160,
+    color: '#6b6f79',
+  },
+};
+
 const gameState = {
   running: false,
   lastTime: 0,
@@ -182,8 +209,41 @@ function keepPlayerOnMap() {
   if (gameState.player.y > maxY) gameState.player.y = maxY;
 }
 
+function collectResources() {
+  const player = gameState.player;
+
+  gameState.pickups = gameState.pickups.filter((pickup) => {
+    if (isTouching(player, pickup)) {
+      gameState.resources[pickup.type] += 1;
+      updateHud();
+      return false;
+    }
+
+    return true;
+  });
+}
+
+function isTouching(player, pickup) {
+  const pickupSize = 18;
+
+  return (
+    player.x < pickup.x + pickupSize &&
+    player.x + player.width > pickup.x &&
+    player.y < pickup.y + pickupSize &&
+    player.y + player.height > pickup.y
+  );
+}
+
+function updateHud() {
+  dayCounter.textContent = String(gameState.day);
+  woodCounter.textContent = String(gameState.resources.wood);
+  foodCounter.textContent = String(gameState.resources.food);
+  metalCounter.textContent = String(gameState.resources.metal);
+}
+
 function draw() {
   drawMap();
+  drawResources();
   drawTyunya();
   drawZombies();
 }
