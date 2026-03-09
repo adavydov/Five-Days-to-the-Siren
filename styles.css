@@ -21,8 +21,7 @@ body {
   width: min(96vw, 1020px);
 }
 
-.panel,
-#game-screen {
+.panel {
   background: #283248;
   border: 2px solid #50638e;
   border-radius: 12px;
@@ -42,16 +41,15 @@ button {
   border-radius: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.2s ease;
 }
 
 button:hover {
   background: #ffdf7b;
-  transform: translateY(-1px);
 }
 
-button:active {
-  transform: translateY(0);
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .hud {
@@ -65,6 +63,11 @@ button:active {
 
 .hud p {
   margin: 0;
+  font-size: 14px;
+}
+
+.hud-row-bottom {
+  justify-content: space-between;
 }
 
 .hud-controls {
@@ -77,9 +80,11 @@ button:active {
   margin: 0 0 8px;
   padding: 6px 8px;
   border-radius: 8px;
+}
+
+.hint {
   background: rgba(127, 150, 203, 0.22);
   border: 1px solid rgba(171, 193, 243, 0.35);
-  animation: hintPulse 2.2s ease-in-out infinite;
 }
 
 .status-message {
@@ -100,8 +105,7 @@ button:active {
   gap: 6px;
 }
 
-.craft-menu h2,
-.craft-menu p {
+.craft-menu h2 {
   margin: 0;
 }
 
@@ -115,23 +119,6 @@ button:active {
   font-weight: bold;
   color: #fff;
   background: #b10d0d;
-  animation: pulse-alert 0.6s linear 4;
-}
-
-.siren-flash {
-  position: absolute;
-  inset: 0;
-  background: rgba(255, 0, 0, 0.25);
-  pointer-events: none;
-  opacity: 0;
-}
-
-.siren-flash.active {
-  animation: flash-red 0.25s linear 6;
-}
-
-#game-screen {
-  position: relative;
 }
 
 #game-canvas {
@@ -142,10 +129,6 @@ button:active {
   border-radius: 8px;
   background: #87b86f;
   image-rendering: pixelated;
-}
-
-.is-paused #game-canvas {
-  filter: saturate(0.75) brightness(0.9);
 }
 
 .hidden {

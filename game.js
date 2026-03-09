@@ -1,14 +1,15 @@
 const startScreen = document.getElementById('start-screen');
 const gameScreen = document.getElementById('game-screen');
 const startButton = document.getElementById('start-button');
-
 const pauseButton = document.getElementById('pause-button');
 const restartButton = document.getElementById('restart-button');
+
 const dayCounter = document.getElementById('day-counter');
 const dayTime = document.getElementById('day-time');
 const woodCount = document.getElementById('wood-count');
 const metalCount = document.getElementById('metal-count');
 const foodCount = document.getElementById('food-count');
+const ammoCount = document.getElementById('ammo-count');
 const workbenchState = document.getElementById('workbench-state');
 const gunState = document.getElementById('gun-state');
 const ammoCount = document.getElementById('ammo-count');
@@ -16,7 +17,6 @@ const hintText = document.getElementById('murlik-hint');
 const statusMessage = document.getElementById('status-message');
 
 const craftMenu = document.getElementById('craft-menu');
-const craftWorkbenchButton = document.getElementById('craft-workbench');
 const craftGunButton = document.getElementById('craft-gun');
 const craftAmmoButton = document.getElementById('craft-ammo');
 const craftCloseButton = document.getElementById('craft-close');
@@ -123,7 +123,7 @@ function resetGameState() {
 function startGame() {
   startScreen.classList.add('hidden');
   gameScreen.classList.remove('hidden');
-  resetGameState();
+  resetGame();
   requestAnimationFrame(gameLoop);
 }
 
@@ -133,7 +133,6 @@ function restartGame() {
 
 function togglePause() {
   if (!gameState.running) return;
-
   gameState.paused = !gameState.paused;
 
   if (gameState.paused) {
@@ -144,7 +143,6 @@ function togglePause() {
   }
 
   pauseButton.textContent = 'Пауза';
-  gameScreen.classList.remove('is-paused');
   gameState.lastTime = performance.now();
   setMessage('Игра продолжается.');
 }
@@ -175,12 +173,13 @@ function update(deltaTime) {
   updateHintRotation(deltaTime);
   updateWorkbenchHint();
   updateBullets(deltaTime);
-  updateHitEffects(deltaTime);
 
   if (gameState.sirenStarted) {
     updateZombies(deltaTime);
     checkLoseState();
   }
+
+  updateMurlikHint();
 }
 
 function updatePlayerMovement(deltaTime) {
@@ -214,8 +213,8 @@ function keepPlayerOnMap() {
 function updateDayTimer(deltaTime) {
   gameState.dayProgress += deltaTime;
 
-  while (gameState.dayProgress >= DAY_DURATION && gameState.day <= MAX_DAYS) {
-    gameState.dayProgress -= DAY_DURATION;
+  if (gameState.dayProgress >= DAY_DURATION) {
+    gameState.dayProgress = 0;
     gameState.day += 1;
 
     if (gameState.day === MAX_DAYS) {
@@ -223,8 +222,12 @@ function updateDayTimer(deltaTime) {
     }
 
     if (gameState.day > MAX_DAYS) {
-      triggerWin();
-      return;
+      gameState.victoryReady = true;
+      gameState.sirenStarted = false;
+      if (gameState.zombies.length === 0) {
+        triggerWin();
+        return;
+      }
     }
   }
 
@@ -240,9 +243,9 @@ function updateHud() {
   woodCount.textContent = String(gameState.resources.wood);
   metalCount.textContent = String(gameState.resources.metal);
   foodCount.textContent = String(gameState.resources.food);
+  ammoCount.textContent = String(gameState.inventory.ammo);
   workbenchState.textContent = gameState.inventory.hasWorkbench ? 'есть' : 'нет';
   gunState.textContent = gameState.inventory.hasGun ? 'есть' : 'нет';
-  ammoCount.textContent = String(gameState.inventory.ammo);
 }
 
 function updateHintRotation(deltaTime) {
@@ -257,8 +260,7 @@ function updateHintRotation(deltaTime) {
 
 function collectResources() {
   for (const node of gameState.resourceNodes) {
-    if (!node.active) continue;
-    if (!isColliding(gameState.player, node)) continue;
+    if (!node.active || !isColliding(gameState.player, node)) continue;
 
     node.active = false;
     gameState.resources[node.type] += 1;
@@ -284,16 +286,13 @@ function updateWorkbenchHint() {
 function openCraftingMenu() {
   if (!gameState.running || !gameState.nearWorkbench) return;
 
-  gameState.craftingOpen = true;
-  craftMenu.classList.remove('hidden');
-  refreshCraftButtons();
+  updateNearbyFlags();
 
   if (gameState.inventory.hasWorkbench) {
     setMessage('Выбери крафт.');
   } else {
     setMessage('Сначала собери верстак.');
   }
-}
 
 function closeCraftingMenu() {
   gameState.craftingOpen = false;
@@ -321,16 +320,17 @@ function craftWorkbench() {
   gameState.inventory.hasWorkbench = true;
   setMessage('Верстак готов.');
   updateHud();
-  refreshCraftButtons();
+  setMessage('Верстак собран. Подойди ближе и нажми E.');
 }
 
-function craftGun() {
-  if (!gameState.inventory.hasWorkbench) {
-    setMessage('Сначала собери верстак.');
-    return;
+function toggleCraftMenu() {
+  gameState.craftingOpen = !gameState.craftingOpen;
+  craftMenu.classList.toggle('hidden', !gameState.craftingOpen);
+  if (gameState.craftingOpen) {
+    setMessage('Верстак открыт. Выбери действие.');
   }
   if (gameState.inventory.hasGun) {
-    setMessage('Пистолет уже есть.');
+    setMessage('Пистолет уже собран.');
     return;
   }
   if (gameState.resources.wood < 1 || gameState.resources.metal < 3) {
@@ -343,7 +343,7 @@ function craftGun() {
   gameState.inventory.hasGun = true;
   setMessage('Пистолет собран!');
   updateHud();
-  refreshCraftButtons();
+  setMessage('Пистолет готов. Теперь сделай пули.');
 }
 
 function craftAmmo() {
@@ -360,7 +360,7 @@ function craftAmmo() {
   gameState.inventory.ammo += 6;
   setMessage('Пули: +6.');
   updateHud();
-  refreshCraftButtons();
+  setMessage('Пули сделаны: +6.');
 }
 
 function shoot() {
@@ -450,13 +450,9 @@ function isOutOfMap(entity) {
 
 function startSiren() {
   if (gameState.sirenStarted) return;
-
   gameState.sirenStarted = true;
   setMessage('🚨 СИРЕНА! Беги в бункер!');
   sirenAlert.classList.remove('hidden');
-  sirenFlash.classList.remove('hidden');
-  sirenFlash.classList.add('active');
-  playSirenSound();
 
   setTimeout(() => {
     sirenAlert.classList.add('hidden');
@@ -491,7 +487,6 @@ function playSirenSound() {
 
 function updateZombies(deltaTime) {
   gameState.spawnTimer -= deltaTime;
-
   if (gameState.spawnTimer <= 0) {
     spawnZombie();
     gameState.spawnTimer = 1.4;
@@ -546,7 +541,6 @@ function keepZombieOutOfBunker(zombie) {
 
 function checkLoseState() {
   if (isPlayerInBunker()) return;
-
   for (const zombie of gameState.zombies) {
     if (isColliding(gameState.player, zombie)) {
       gameOver('lose');
@@ -559,28 +553,60 @@ function isPlayerInBunker() {
   return isColliding(gameState.player, gameState.bunker);
 }
 
+function updateMurlikHint() {
+  if (!gameState.running) return;
+
+  if (gameState.sirenStarted) {
+    hintText.textContent = 'Мурлик: Сирена! Прячься в бункере или отбивайся.';
+    return;
+  }
+
+  if (!gameState.inventory.hasWorkbench) {
+    if (gameState.resources.wood < 3) {
+      hintText.textContent = 'Мурлик: Нам нужно больше дерева. Ищи его в лесу.';
+      return;
+    }
+
+    if (gameState.resources.metal < 1) {
+      hintText.textContent = 'Мурлик: Металл пригодится для верстака. Поищи рядом с деревней.';
+      return;
+    }
+
+    hintText.textContent = 'Мурлик: Возвращайся в бункер. Там можно собрать верстак.';
+    return;
+  }
+
+  if (!gameState.inventory.hasGun) {
+    hintText.textContent = 'Мурлик: Теперь на верстаке можно собрать пистолет.';
+    return;
+  }
+
+  if (gameState.inventory.ammo <= 0) {
+    hintText.textContent = 'Мурлик: Без пуль пистолет бесполезен. Сделай патроны.';
+    return;
+  }
+
+  hintText.textContent = 'Мурлик: Отлично! Держись ближе к бункеру до Сирены.';
+}
+
 function triggerWin() {
   gameOver('win');
 }
 
 function gameOver(result) {
   gameState.running = false;
-  closeCraftingMenu();
+  gameState.craftingOpen = false;
+  craftMenu.classList.add('hidden');
 
   if (result === 'win') {
-    setMessage('🎉 Победа! Ты продержалась до конца пятого дня!');
+    setMessage('🎉 Победа! Ты пережила Сирену и зачистила угрозу.');
   } else {
     setMessage('💀 Поражение! Зомби поймали Тюню вне бункера.');
   }
 }
 
 function isColliding(a, b) {
-  return (
-    a.x < b.x + b.width &&
-    a.x + a.width > b.x &&
-    a.y < b.y + b.height &&
-    a.y + a.height > b.y
-  );
+  return a.x < b.x + b.width && a.x + a.width > b.x && a.y < b.y + b.height && a.y + a.height > b.y;
 }
 
 function setMessage(text) {
@@ -686,9 +712,9 @@ function handleKeyDown(event) {
 
   if (key === 'e') {
     if (gameState.craftingOpen) {
-      closeCraftingMenu();
+      toggleCraftMenu();
     } else {
-      openCraftingMenu();
+      handleInteract();
     }
   }
 
