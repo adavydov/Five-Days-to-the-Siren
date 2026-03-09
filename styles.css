@@ -14,10 +14,11 @@ body {
   color: #f4f7ff;
   display: grid;
   place-items: center;
+  padding: 10px;
 }
 
 .app {
-  width: min(92vw, 720px);
+  width: min(96vw, 1020px);
 }
 
 .panel,
@@ -25,7 +26,7 @@ body {
   background: #283248;
   border: 2px solid #50638e;
   border-radius: 12px;
-  padding: 20px;
+  padding: 12px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, 0.25);
 }
 
@@ -36,11 +37,10 @@ h1 {
 button {
   background: #ffd65a;
   color: #1f2230;
-  font-size: 16px;
+  font-size: 14px;
   border: none;
   border-radius: 8px;
-  padding: 10px 14px;
-  padding: 9px 14px;
+  padding: 8px 12px;
   cursor: pointer;
   transition: transform 0.15s ease, background-color 0.2s ease;
 }
@@ -56,14 +56,11 @@ button:active {
 
 .hud {
   display: grid;
-  grid-template-columns: repeat(3, minmax(140px, 1fr));
-  gap: 8px 12px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 4px 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 .hud p {
@@ -72,49 +69,49 @@ button:active {
 
 .hud-controls {
   display: flex;
-  gap: 8px;
+  gap: 6px;
+  justify-content: flex-end;
 }
 
 .hint {
-  margin: 0 0 10px;
-  padding: 8px 10px;
+  margin: 0 0 8px;
+  padding: 6px 8px;
   border-radius: 8px;
   background: rgba(127, 150, 203, 0.22);
   border: 1px solid rgba(171, 193, 243, 0.35);
   animation: hintPulse 2.2s ease-in-out infinite;
 }
 
-#day-counter {
-  display: inline-block;
-  min-width: 16px;
-  animation: dayPop 0.5s ease;
 .status-message {
-  min-height: 24px;
-  margin: 0 0 10px;
+  min-height: 20px;
+  margin: 0 0 8px;
   font-weight: bold;
   color: #ffe17d;
+  font-size: 14px;
 }
 
 .craft-menu {
-  margin-bottom: 10px;
-  padding: 12px;
+  margin-bottom: 8px;
+  padding: 10px;
   border: 2px solid #7f96cb;
   border-radius: 8px;
   background: #1e2636;
   display: grid;
-  gap: 8px;
+  gap: 6px;
 }
 
 .craft-menu h2,
 .craft-menu p {
   margin: 0;
+}
+
 .siren-alert {
-  margin: 0 0 10px;
-  padding: 12px;
+  margin: 0 0 8px;
+  padding: 8px;
   border: 2px solid #ff9292;
   border-radius: 8px;
   text-align: center;
-  font-size: 28px;
+  font-size: 22px;
   font-weight: bold;
   color: #fff;
   background: #b10d0d;
@@ -139,6 +136,7 @@ button:active {
 
 #game-canvas {
   width: 100%;
+  max-width: 100%;
   height: auto;
   border: 2px solid #7f96cb;
   border-radius: 8px;
@@ -164,18 +162,10 @@ button:active {
   }
 }
 
-@keyframes dayPop {
-  0% {
-    transform: scale(0.8);
-  }
-  100% {
-    transform: scale(1);
-  }
 @keyframes flash-red {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -186,7 +176,6 @@ button:active {
   100% {
     transform: scale(1);
   }
-
   50% {
     transform: scale(1.03);
   }

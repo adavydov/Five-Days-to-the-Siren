@@ -5,7 +5,6 @@ const startButton = document.getElementById('start-button');
 const pauseButton = document.getElementById('pause-button');
 const restartButton = document.getElementById('restart-button');
 const dayCounter = document.getElementById('day-counter');
-const hintText = document.getElementById('murlik-hint');
 const dayTime = document.getElementById('day-time');
 const woodCount = document.getElementById('wood-count');
 const metalCount = document.getElementById('metal-count');
@@ -13,6 +12,8 @@ const foodCount = document.getElementById('food-count');
 const workbenchState = document.getElementById('workbench-state');
 const gunState = document.getElementById('gun-state');
 const ammoCount = document.getElementById('ammo-count');
+const hintText = document.getElementById('murlik-hint');
+const statusMessage = document.getElementById('status-message');
 
 const craftMenu = document.getElementById('craft-menu');
 const craftWorkbenchButton = document.getElementById('craft-workbench');
@@ -20,99 +21,103 @@ const craftGunButton = document.getElementById('craft-gun');
 const craftAmmoButton = document.getElementById('craft-ammo');
 const craftCloseButton = document.getElementById('craft-close');
 
-const woodCounter = document.getElementById('wood-counter');
-const foodCounter = document.getElementById('food-counter');
-const metalCounter = document.getElementById('metal-counter');
-const statusMessage = document.getElementById('status-message');
 const sirenAlert = document.getElementById('siren-alert');
 const sirenFlash = document.getElementById('siren-flash');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
 const keys = {};
-const DAY_DURATION = 20;
+const DAY_DURATION = 6;
+const MAX_DAYS = 5;
 
 const murlikHints = [
   'Мурлик: Собери припасы и держись ближе к бункеру.',
-  'Мурлик: В лесу тише, но после сирены там опаснее.',
-  'Мурлик: Если устал — жми «Пауза», я подожду.',
-  'Мурлик: Говорят, сирена включается сама, когда небо краснеет.',
-  'Мурлик: Последний день близко. Не отходи далеко от укрытия.',
+  'Мурлик: Темп быстрее, не откладывай крафт на потом.',
+  'Мурлик: Лес богат деревом, но не теряй время.',
+  'Мурлик: Пули решают всё после Сирены.',
+  'Мурлик: Пятый день! К бункеру и не паникуй.',
 ];
-const MAX_DAYS = 5;
 
 const mapZones = {
-  forest: { x: 0, y: 0, width: 640, height: 130, color: '#4d7f42' },
-  village: { x: 430, y: 210, width: 210, height: 190, color: '#c9b180' },
-  bunker: { x: 20, y: 240, width: 180, height: 160, color: '#6b6f79' },
+  forest: { x: 0, y: 0, width: 940, height: 175, color: '#4d7f42' },
+  village: { x: 600, y: 230, width: 300, height: 250, color: '#c9b180' },
+  bunker: { x: 35, y: 315, width: 245, height: 180, color: '#6b6f79' },
 };
 
 const gameState = {
   running: false,
   paused: false,
+  craftingOpen: false,
+  nearWorkbench: false,
   lastTime: 0,
   day: 1,
-  dayTimer: 0,
-  hintTimer: 0,
   dayProgress: 0,
+  hintTimer: 0,
   sirenStarted: false,
+  spawnTimer: 0,
+  resources: { wood: 0, metal: 0, food: 0 },
+  inventory: { hasWorkbench: false, hasGun: false, ammo: 0 },
+  player: {
+    x: 120,
+    y: 390,
+    width: 24,
+    height: 24,
+    speed: 220,
+    lastDirection: 'right',
+  },
+  bunker: { x: 55, y: 340, width: 180, height: 140 },
+  workbenchSpot: { x: 95, y: 385, width: 60, height: 42 },
+  resourceNodes: [],
   zombies: [],
   bullets: [],
   hitEffects: [],
-  spawnTimer: 0,
-  craftingOpen: false,
-  nearWorkbench: false,
-  resources: {
-    wood: 0,
-    food: 0,
-    metal: 0,
-  },
-  pickups: [],
-  player: {
-    x: 80,
-    y: 300,
-    width: 24,
-    height: 24,
-    speed: 180,
-    lastDirection: 'right',
-  },
-  bunker: { x: 30, y: 260, width: 140, height: 110 },
-  workbenchSpot: { x: 52, y: 286, width: 48, height: 38 },
-  resources: { wood: 0, metal: 0, food: 0 },
-  inventory: { hasWorkbench: false, hasGun: false, ammo: 0 },
-  resourceNodes: [],
 };
 
 function createResourceNodes() {
   return [
-    { type: 'wood', x: 80, y: 55, width: 20, height: 20, active: true },
-    { type: 'wood', x: 220, y: 78, width: 20, height: 20, active: true },
-    { type: 'wood', x: 330, y: 40, width: 20, height: 20, active: true },
-    { type: 'food', x: 500, y: 270, width: 20, height: 20, active: true },
-    { type: 'food', x: 575, y: 320, width: 20, height: 20, active: true },
-    { type: 'metal', x: 380, y: 300, width: 20, height: 20, active: true },
-    { type: 'metal', x: 220, y: 330, width: 20, height: 20, active: true },
+    { type: 'wood', x: 90, y: 55, width: 22, height: 22, active: true },
+    { type: 'wood', x: 230, y: 80, width: 22, height: 22, active: true },
+    { type: 'wood', x: 390, y: 62, width: 22, height: 22, active: true },
+    { type: 'wood', x: 535, y: 115, width: 22, height: 22, active: true },
+    { type: 'food', x: 670, y: 280, width: 22, height: 22, active: true },
+    { type: 'food', x: 790, y: 340, width: 22, height: 22, active: true },
+    { type: 'food', x: 865, y: 430, width: 22, height: 22, active: true },
+    { type: 'metal', x: 300, y: 350, width: 22, height: 22, active: true },
+    { type: 'metal', x: 560, y: 245, width: 22, height: 22, active: true },
+    { type: 'metal', x: 640, y: 205, width: 22, height: 22, active: true },
   ];
 }
 
 function resetGameState() {
-function startGame() {
-  resetGame();
-  startScreen.classList.add('hidden');
-  gameScreen.classList.remove('hidden');
   gameState.running = true;
   gameState.paused = false;
-  gameState.lastTime = performance.now();
+  gameState.craftingOpen = false;
+  gameState.nearWorkbench = false;
   gameState.day = 1;
-  gameState.dayTimer = 0;
+  gameState.dayProgress = 0;
   gameState.hintTimer = 0;
-  gameState.player.x = 80;
-  gameState.player.y = 300;
+  gameState.sirenStarted = false;
+  gameState.spawnTimer = 0;
+  gameState.resources = { wood: 0, metal: 0, food: 0 };
+  gameState.inventory = { hasWorkbench: false, hasGun: false, ammo: 0 };
+  gameState.player.x = 120;
+  gameState.player.y = 390;
+  gameState.player.lastDirection = 'right';
+  gameState.resourceNodes = createResourceNodes();
+  gameState.zombies = [];
+  gameState.bullets = [];
+  gameState.hitEffects = [];
+  gameState.lastTime = performance.now();
 
-  dayCounter.textContent = String(gameState.day);
-  hintText.textContent = murlikHints[0];
   pauseButton.textContent = 'Пауза';
   gameScreen.classList.remove('is-paused');
+  hintText.textContent = murlikHints[0];
+  sirenAlert.classList.add('hidden');
+  sirenFlash.classList.add('hidden');
+  sirenFlash.classList.remove('active');
+  setMessage('');
+  closeCraftingMenu();
+  updateHud();
 }
 
 function startGame() {
@@ -124,7 +129,6 @@ function startGame() {
 
 function restartGame() {
   resetGameState();
-  draw();
 }
 
 function togglePause() {
@@ -135,41 +139,30 @@ function togglePause() {
   if (gameState.paused) {
     pauseButton.textContent = 'Продолжить';
     gameScreen.classList.add('is-paused');
-    hintText.textContent = 'Мурлик: Время замерло. Нажми «Продолжить», когда будешь готов.';
+    setMessage('Пауза. Нажми «Продолжить» или P.');
     return;
   }
 
   pauseButton.textContent = 'Пауза';
   gameScreen.classList.remove('is-paused');
   gameState.lastTime = performance.now();
-  updateHintByDay();
-  updateHud();
-  setMessage('Собирай ресурсы в лесу и деревне. Подготовься до Сирены.');
-  statusMessage.textContent = 'Собирай ресурсы и держись ближе к бункеру.';
-  requestAnimationFrame(gameLoop);
+  setMessage('Игра продолжается.');
 }
 
-function resetGame() {
-  gameState.day = 1;
-  gameState.dayProgress = 0;
-  gameState.sirenStarted = false;
-  gameState.zombies = [];
-  gameState.bullets = [];
-  gameState.hitEffects = [];
-  gameState.spawnTimer = 0;
-  gameState.craftingOpen = false;
-  gameState.nearWorkbench = false;
-  gameState.player.x = 80;
-  gameState.player.y = 300;
-  gameState.player.lastDirection = 'right';
-  gameState.resources.wood = 0;
-  gameState.resources.metal = 0;
-  gameState.resources.food = 0;
-  gameState.inventory.hasWorkbench = false;
-  gameState.inventory.hasGun = false;
-  gameState.inventory.ammo = 0;
-  gameState.resourceNodes = createResourceNodes();
-  closeCraftingMenu();
+function gameLoop(timestamp) {
+  if (!gameState.running) {
+    draw();
+    return;
+  }
+
+  if (!gameState.paused) {
+    const deltaTime = Math.min((timestamp - gameState.lastTime) / 1000, 0.05);
+    update(deltaTime);
+    draw();
+  }
+
+  gameState.lastTime = timestamp;
+  requestAnimationFrame(gameLoop);
 }
 
 function update(deltaTime) {
@@ -177,53 +170,9 @@ function update(deltaTime) {
     updatePlayerMovement(deltaTime);
   }
 
-  gameState.resources.wood = 0;
-  gameState.resources.food = 0;
-  gameState.resources.metal = 0;
-  gameState.pickups = createPickups();
-  gameState.player.x = 80;
-  gameState.player.y = 300;
-  sirenAlert.classList.add('hidden');
-  sirenFlash.classList.add('hidden');
-  sirenFlash.classList.remove('active');
-}
-
-function createPickups() {
-  return [
-    { x: 70, y: 40, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
-    { x: 145, y: 78, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
-    { x: 230, y: 95, width: 14, height: 14, type: 'wood', color: '#8f5e30', label: 'Д' },
-    { x: 535, y: 250, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
-    { x: 500, y: 315, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
-    { x: 585, y: 340, width: 14, height: 14, type: 'food', color: '#e6c652', label: 'Е' },
-    { x: 220, y: 300, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
-    { x: 440, y: 200, width: 14, height: 14, type: 'metal', color: '#b8beca', label: 'М' },
-  ];
-}
-
-function update(deltaTime) {
-  const moveSpeed = gameState.player.speed * deltaTime;
-
-  if (keys.w || keys.arrowup) {
-    gameState.player.y -= moveSpeed;
-  }
-  if (keys.s || keys.arrowdown) {
-    gameState.player.y += moveSpeed;
-  }
-  if (keys.a || keys.arrowleft) {
-    gameState.player.x -= moveSpeed;
-  }
-  if (keys.d || keys.arrowright) {
-    gameState.player.x += moveSpeed;
-  if (keys.w || keys.arrowup) gameState.player.y -= moveSpeed;
-  if (keys.s || keys.arrowdown) gameState.player.y += moveSpeed;
-  if (keys.a || keys.arrowleft) gameState.player.x -= moveSpeed;
-  if (keys.d || keys.arrowright) gameState.player.x += moveSpeed;
-
-  keepPlayerOnMap();
-  collectPickups();
-  updateDayTimer(deltaTime);
   collectResources();
+  updateDayTimer(deltaTime);
+  updateHintRotation(deltaTime);
   updateWorkbenchHint();
   updateBullets(deltaTime);
   updateHitEffects(deltaTime);
@@ -255,23 +204,11 @@ function updatePlayerMovement(deltaTime) {
   }
 
   keepPlayerOnMap();
-function collectPickups() {
-  for (let i = gameState.pickups.length - 1; i >= 0; i -= 1) {
-    const pickup = gameState.pickups[i];
-
-    if (isColliding(gameState.player, pickup)) {
-      gameState.resources[pickup.type] += 1;
-      gameState.pickups.splice(i, 1);
-      statusMessage.textContent = `Собрано: ${getResourceName(pickup.type)}.`;
-      updateHud();
-    }
-  }
 }
 
-function getResourceName(type) {
-  if (type === 'wood') return 'дерево';
-  if (type === 'food') return 'еда';
-  return 'металл';
+function keepPlayerOnMap() {
+  gameState.player.x = Math.max(0, Math.min(canvas.width - gameState.player.width, gameState.player.x));
+  gameState.player.y = Math.max(0, Math.min(canvas.height - gameState.player.height, gameState.player.y));
 }
 
 function updateDayTimer(deltaTime) {
@@ -308,6 +245,16 @@ function updateHud() {
   ammoCount.textContent = String(gameState.inventory.ammo);
 }
 
+function updateHintRotation(deltaTime) {
+  gameState.hintTimer += deltaTime;
+
+  if (gameState.hintTimer >= 8) {
+    gameState.hintTimer = 0;
+    const dayIndex = Math.max(0, Math.min(gameState.day - 1, murlikHints.length - 1));
+    hintText.textContent = murlikHints[dayIndex];
+  }
+}
+
 function collectResources() {
   for (const node of gameState.resourceNodes) {
     if (!node.active) continue;
@@ -316,13 +263,8 @@ function collectResources() {
     node.active = false;
     gameState.resources[node.type] += 1;
 
-    const resourceNames = {
-      wood: 'дерево',
-      metal: 'металл',
-      food: 'еда',
-    };
-
-    setMessage(`Собран ресурс: ${resourceNames[node.type]}.`);
+    const names = { wood: 'дерево', metal: 'металл', food: 'еда' };
+    setMessage(`Собрано: ${names[node.type]}.`);
     updateHud();
   }
 }
@@ -330,26 +272,24 @@ function collectResources() {
 function updateWorkbenchHint() {
   gameState.nearWorkbench = isColliding(gameState.player, gameState.workbenchSpot);
 
-  if (!gameState.nearWorkbench || gameState.craftingOpen) {
-    return;
-  }
+  if (gameState.craftingOpen || !gameState.nearWorkbench) return;
 
   if (gameState.inventory.hasWorkbench) {
-    setMessage('Нажми E, чтобы использовать верстак.');
+    setMessage('Нажми E, чтобы открыть верстак.');
   } else {
-    setMessage('Нажми E, чтобы собрать верстак.');
+    setMessage('Нажми E рядом с местом верстака.');
   }
 }
 
 function openCraftingMenu() {
-  if (!gameState.nearWorkbench || !gameState.running) return;
+  if (!gameState.running || !gameState.nearWorkbench) return;
 
   gameState.craftingOpen = true;
   craftMenu.classList.remove('hidden');
   refreshCraftButtons();
 
   if (gameState.inventory.hasWorkbench) {
-    setMessage('Выбери предмет для крафта.');
+    setMessage('Выбери крафт.');
   } else {
     setMessage('Сначала собери верстак.');
   }
@@ -361,11 +301,9 @@ function closeCraftingMenu() {
 }
 
 function refreshCraftButtons() {
-  const hasWorkbench = gameState.inventory.hasWorkbench;
-
-  craftWorkbenchButton.disabled = hasWorkbench;
-  craftGunButton.disabled = !hasWorkbench || gameState.inventory.hasGun;
-  craftAmmoButton.disabled = !hasWorkbench;
+  craftWorkbenchButton.disabled = gameState.inventory.hasWorkbench;
+  craftGunButton.disabled = !gameState.inventory.hasWorkbench || gameState.inventory.hasGun;
+  craftAmmoButton.disabled = !gameState.inventory.hasWorkbench;
 }
 
 function craftWorkbench() {
@@ -373,17 +311,15 @@ function craftWorkbench() {
     setMessage('Верстак уже собран.');
     return;
   }
-
   if (gameState.resources.wood < 3 || gameState.resources.metal < 1) {
-    setMessage('Не хватает ресурсов: нужно дерево x3 и металл x1.');
+    setMessage('Нужно дерево x3 и металл x1.');
     return;
   }
 
   gameState.resources.wood -= 3;
   gameState.resources.metal -= 1;
   gameState.inventory.hasWorkbench = true;
-
-  setMessage('Верстак собран! Теперь можно крафтить оружие и пули.');
+  setMessage('Верстак готов.');
   updateHud();
   refreshCraftButtons();
 }
@@ -393,22 +329,19 @@ function craftGun() {
     setMessage('Сначала собери верстак.');
     return;
   }
-
   if (gameState.inventory.hasGun) {
     setMessage('Пистолет уже есть.');
     return;
   }
-
   if (gameState.resources.wood < 1 || gameState.resources.metal < 3) {
-    setMessage('Не хватает ресурсов: нужно дерево x1 и металл x3.');
+    setMessage('Нужно дерево x1 и металл x3.');
     return;
   }
 
   gameState.resources.wood -= 1;
   gameState.resources.metal -= 3;
   gameState.inventory.hasGun = true;
-
-  setMessage('Пистолет готов! Нужны пули для стрельбы.');
+  setMessage('Пистолет собран!');
   updateHud();
   refreshCraftButtons();
 }
@@ -418,30 +351,26 @@ function craftAmmo() {
     setMessage('Сначала собери верстак.');
     return;
   }
-
   if (gameState.resources.metal < 1) {
-    setMessage('Не хватает металла: нужно металл x1.');
+    setMessage('Нужен металл x1.');
     return;
   }
 
   gameState.resources.metal -= 1;
   gameState.inventory.ammo += 6;
-
-  setMessage('Пули готовы: +6.');
+  setMessage('Пули: +6.');
   updateHud();
   refreshCraftButtons();
 }
 
 function shoot() {
   if (!gameState.running || gameState.craftingOpen) return;
-
   if (!gameState.inventory.hasGun) {
-    setMessage('Сначала собери пистолет на верстаке.');
+    setMessage('Сначала собери пистолет.');
     return;
   }
-
   if (gameState.inventory.ammo <= 0) {
-    setMessage('Нет пуль. Сделай пули на верстаке.');
+    setMessage('Нет пуль.');
     return;
   }
 
@@ -453,7 +382,7 @@ function shoot() {
     y: gameState.player.y + gameState.player.height / 2 - 3,
     width: 6,
     height: 6,
-    speed: 300,
+    speed: 340,
     dx: 0,
     dy: 0,
   };
@@ -463,48 +392,51 @@ function shoot() {
   if (gameState.player.lastDirection === 'left') bullet.dx = -1;
   if (gameState.player.lastDirection === 'right') bullet.dx = 1;
 
+  if (bullet.dx === 0 && bullet.dy === 0) {
+    bullet.dx = 1;
+  }
+
   gameState.bullets.push(bullet);
 }
 
 function updateBullets(deltaTime) {
-  const activeBullets = [];
+  const aliveBullets = [];
 
   for (const bullet of gameState.bullets) {
     bullet.x += bullet.dx * bullet.speed * deltaTime;
     bullet.y += bullet.dy * bullet.speed * deltaTime;
 
-    if (isOutOfMap(bullet)) {
-      continue;
-    }
+    if (isOutOfMap(bullet)) continue;
 
     let hitZombie = false;
-
     for (let i = gameState.zombies.length - 1; i >= 0; i -= 1) {
-      const zombie = gameState.zombies[i];
-      if (!isColliding(bullet, zombie)) continue;
+      if (!isColliding(bullet, gameState.zombies[i])) continue;
 
+      const zombie = gameState.zombies[i];
       gameState.zombies.splice(i, 1);
-      gameState.hitEffects.push({ x: zombie.x + 8, y: zombie.y + 8, life: 0.25 });
+      gameState.hitEffects.push({ x: zombie.x + 10, y: zombie.y + 10, life: 0.25 });
       setMessage('Зомби повержен!');
       hitZombie = true;
       break;
     }
 
     if (!hitZombie) {
-      activeBullets.push(bullet);
+      aliveBullets.push(bullet);
     }
   }
 
-  gameState.bullets = activeBullets;
+  gameState.bullets = aliveBullets;
 }
 
 function updateHitEffects(deltaTime) {
-  const effects = [];
+  const aliveEffects = [];
+
   for (const effect of gameState.hitEffects) {
     effect.life -= deltaTime;
-    if (effect.life > 0) effects.push(effect);
+    if (effect.life > 0) aliveEffects.push(effect);
   }
-  gameState.hitEffects = effects;
+
+  gameState.hitEffects = aliveEffects;
 }
 
 function isOutOfMap(entity) {
@@ -514,17 +446,13 @@ function isOutOfMap(entity) {
     entity.y + entity.height < 0 ||
     entity.y > canvas.height
   );
-  woodCounter.textContent = String(gameState.resources.wood);
-  foodCounter.textContent = String(gameState.resources.food);
-  metalCounter.textContent = String(gameState.resources.metal);
 }
 
 function startSiren() {
   if (gameState.sirenStarted) return;
 
   gameState.sirenStarted = true;
-  setMessage('🚨 СИРЕНА! Зомби идут. Держись в бункере и отбивайся.');
-  statusMessage.textContent = '🚨 СИРЕНА! Беги в бункер и избегай зомби!';
+  setMessage('🚨 СИРЕНА! Беги в бункер!');
   sirenAlert.classList.remove('hidden');
   sirenFlash.classList.remove('hidden');
   sirenFlash.classList.add('active');
@@ -532,9 +460,6 @@ function startSiren() {
 
   setTimeout(() => {
     sirenAlert.classList.add('hidden');
-  }, 2500);
-
-  setTimeout(() => {
     sirenFlash.classList.add('hidden');
     sirenFlash.classList.remove('active');
   }, 1800);
@@ -542,7 +467,6 @@ function startSiren() {
 
 function playSirenSound() {
   const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-
   if (!AudioContextClass) return;
 
   const audioContext = new AudioContextClass();
@@ -550,22 +474,19 @@ function playSirenSound() {
   const gainNode = audioContext.createGain();
 
   oscillator.type = 'sawtooth';
-  oscillator.frequency.setValueAtTime(520, audioContext.currentTime);
-  oscillator.frequency.linearRampToValueAtTime(880, audioContext.currentTime + 0.3);
-  oscillator.frequency.linearRampToValueAtTime(520, audioContext.currentTime + 0.6);
+  oscillator.frequency.setValueAtTime(500, audioContext.currentTime);
+  oscillator.frequency.linearRampToValueAtTime(860, audioContext.currentTime + 0.3);
+  oscillator.frequency.linearRampToValueAtTime(500, audioContext.currentTime + 0.6);
 
   gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.02);
+  gainNode.gain.exponentialRampToValueAtTime(0.1, audioContext.currentTime + 0.03);
   gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.65);
 
   oscillator.connect(gainNode);
   gainNode.connect(audioContext.destination);
   oscillator.start();
   oscillator.stop(audioContext.currentTime + 0.65);
-
-  oscillator.onended = () => {
-    audioContext.close();
-  };
+  oscillator.onended = () => audioContext.close();
 }
 
 function updateZombies(deltaTime) {
@@ -573,7 +494,7 @@ function updateZombies(deltaTime) {
 
   if (gameState.spawnTimer <= 0) {
     spawnZombie();
-    gameState.spawnTimer = 2;
+    gameState.spawnTimer = 1.4;
   }
 
   for (const zombie of gameState.zombies) {
@@ -588,6 +509,24 @@ function updateZombies(deltaTime) {
   }
 }
 
+function spawnZombie() {
+  const side = Math.floor(Math.random() * 3);
+  const zombie = { width: 20, height: 20, speed: 82 };
+
+  if (side === 0) {
+    zombie.x = Math.random() * (canvas.width - zombie.width);
+    zombie.y = 8;
+  } else if (side === 1) {
+    zombie.x = canvas.width - zombie.width - 8;
+    zombie.y = 160 + Math.random() * (canvas.height - 200);
+  } else {
+    zombie.x = 300 + Math.random() * (canvas.width - 320);
+    zombie.y = canvas.height - zombie.height - 8;
+  }
+
+  gameState.zombies.push(zombie);
+}
+
 function keepZombieOutOfBunker(zombie) {
   if (!isColliding(zombie, gameState.bunker)) return;
 
@@ -595,31 +534,14 @@ function keepZombieOutOfBunker(zombie) {
   const bunkerCenterY = gameState.bunker.y + gameState.bunker.height / 2;
   const zombieCenterX = zombie.x + zombie.width / 2;
   const zombieCenterY = zombie.y + zombie.height / 2;
-
   const dx = zombieCenterX - bunkerCenterX;
   const dy = zombieCenterY - bunkerCenterY;
 
   if (Math.abs(dx) > Math.abs(dy)) {
-    if (dx > 0) {
-      zombie.x = gameState.bunker.x + gameState.bunker.width;
-    } else {
-      zombie.x = gameState.bunker.x - zombie.width;
-    }
-  } else if (dy > 0) {
-    zombie.y = gameState.bunker.y + gameState.bunker.height;
+    zombie.x = dx > 0 ? gameState.bunker.x + gameState.bunker.width : gameState.bunker.x - zombie.width;
   } else {
-    zombie.y = gameState.bunker.y - zombie.height;
+    zombie.y = dy > 0 ? gameState.bunker.y + gameState.bunker.height : gameState.bunker.y - zombie.height;
   }
-}
-
-function spawnZombie() {
-  gameState.zombies.push({
-    x: Math.random() * (canvas.width - 20),
-    y: 20 + Math.random() * 70,
-    width: 20,
-    height: 20,
-    speed: 75,
-  });
 }
 
 function checkLoseState() {
@@ -652,39 +574,6 @@ function gameOver(result) {
   }
 }
 
-function setMessage(text) {
-  statusMessage.textContent = text;
-}
-
-  keepPlayerOnMap();
-  updateDayProgress(deltaTime);
-  updateHintRotation(deltaTime);
-}
-
-function updateDayProgress(deltaTime) {
-  if (gameState.day >= 5) return;
-
-  gameState.dayTimer += deltaTime;
-  if (gameState.dayTimer < DAY_DURATION) return;
-
-  gameState.day += 1;
-  gameState.dayTimer = 0;
-  dayCounter.textContent = String(gameState.day);
-  updateHintByDay();
-}
-
-function updateHintRotation(deltaTime) {
-  gameState.hintTimer += deltaTime;
-
-  if (gameState.hintTimer < 8) return;
-
-  gameState.hintTimer = 0;
-  updateHintByDay();
-}
-
-function updateHintByDay() {
-  const hintIndex = Math.min(gameState.day - 1, murlikHints.length - 1);
-  hintText.textContent = murlikHints[hintIndex];
 function isColliding(a, b) {
   return (
     a.x < b.x + b.width &&
@@ -694,154 +583,101 @@ function isColliding(a, b) {
   );
 }
 
-function keepPlayerOnMap() {
-  const maxX = canvas.width - gameState.player.width;
-  const maxY = canvas.height - gameState.player.height;
-
-  if (gameState.player.x < 0) gameState.player.x = 0;
-  if (gameState.player.y < 0) gameState.player.y = 0;
-  if (gameState.player.x > maxX) gameState.player.x = maxX;
-  if (gameState.player.y > maxY) gameState.player.y = maxY;
+function setMessage(text) {
+  statusMessage.textContent = text;
 }
 
 function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
   drawMap();
   drawResourceNodes();
-  drawWorkbench();
-  drawTyunya();
+  drawWorkbenchSpot();
   drawBullets();
-  drawPickups();
-  drawTyunya();
-
-  if (gameState.paused) {
-    drawPauseOverlay();
-  }
   drawZombies();
   drawHitEffects();
+  drawPlayer();
 }
 
 function drawMap() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawZone(mapZones.forest, 'Лес');
+  drawZone(mapZones.village, 'Деревня');
+  drawZone(mapZones.bunker, 'Бункер');
 
-  ctx.fillStyle = mapZones.forest.color;
-  ctx.fillRect(mapZones.forest.x, mapZones.forest.y, mapZones.forest.width, mapZones.forest.height);
+  ctx.strokeStyle = '#b9c4e4';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(gameState.bunker.x, gameState.bunker.y, gameState.bunker.width, gameState.bunker.height);
+}
 
-  ctx.fillStyle = mapZones.village.color;
-  ctx.fillRect(mapZones.village.x, mapZones.village.y, mapZones.village.width, mapZones.village.height);
+function drawZone(zone, label) {
+  ctx.fillStyle = zone.color;
+  ctx.fillRect(zone.x, zone.y, zone.width, zone.height);
 
-  ctx.fillStyle = mapZones.bunker.color;
-  ctx.fillRect(mapZones.bunker.x, mapZones.bunker.y, mapZones.bunker.width, mapZones.bunker.height);
-  ctx.fillStyle = '#464b55';
-  ctx.fillRect(70, 300, 60, 70);
-
-  if (gameState.sirenStarted) {
-    ctx.fillStyle = 'rgba(180, 30, 30, 0.25)';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
+  ctx.fillStyle = '#1f2230';
+  ctx.font = 'bold 18px Arial';
+  ctx.fillText(label, zone.x + 12, zone.y + 28);
 }
 
 function drawResourceNodes() {
   for (const node of gameState.resourceNodes) {
     if (!node.active) continue;
 
-    if (node.type === 'wood') ctx.fillStyle = '#7f4f2a';
-    if (node.type === 'metal') ctx.fillStyle = '#a6b1c3';
-    if (node.type === 'food') ctx.fillStyle = '#f05d6f';
+    if (node.type === 'wood') ctx.fillStyle = '#8f5e30';
+    if (node.type === 'food') ctx.fillStyle = '#e6c652';
+    if (node.type === 'metal') ctx.fillStyle = '#b8beca';
 
     ctx.fillRect(node.x, node.y, node.width, node.height);
-  }
-}
-
-function drawWorkbench() {
-  const { x, y, width, height } = gameState.workbenchSpot;
-
-  if (gameState.inventory.hasWorkbench) {
-    ctx.fillStyle = '#9c6f3a';
-    ctx.fillRect(x, y, width, height);
-    ctx.fillStyle = '#5d3e1d';
-    ctx.fillRect(x + 3, y + 4, width - 6, 6);
-
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '12px Arial';
-    ctx.fillText('Верстак', x - 2, y - 8);
-  } else {
-    ctx.strokeStyle = '#d9e3ff';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, width, height);
-function drawPickups() {
-  for (const pickup of gameState.pickups) {
-    ctx.fillStyle = pickup.color;
-    ctx.fillRect(pickup.x, pickup.y, pickup.width, pickup.height);
-
     ctx.fillStyle = '#1f2230';
-    ctx.font = '10px Arial';
-    ctx.fillText(pickup.label, pickup.x + 3, pickup.y + 10);
+    ctx.font = 'bold 12px Arial';
+    const text = node.type === 'wood' ? 'Д' : node.type === 'food' ? 'Е' : 'М';
+    ctx.fillText(text, node.x + 6, node.y + 15);
   }
 }
 
-function drawTyunya() {
-  const { x, y, width, height } = gameState.player;
+function drawWorkbenchSpot() {
+  ctx.fillStyle = '#503a2a';
+  ctx.fillRect(
+    gameState.workbenchSpot.x,
+    gameState.workbenchSpot.y,
+    gameState.workbenchSpot.width,
+    gameState.workbenchSpot.height,
+  );
 
-  ctx.fillStyle = '#ff9bc8';
-  ctx.fillRect(x, y, width, height);
+  ctx.fillStyle = '#f4f7ff';
+  ctx.font = 'bold 12px Arial';
+  ctx.fillText('Верстак', gameState.workbenchSpot.x + 5, gameState.workbenchSpot.y + 24);
+}
 
-  ctx.fillStyle = '#1f2230';
-  ctx.fillRect(x + 5, y + 6, 4, 4);
-  ctx.fillRect(x + 15, y + 6, 4, 4);
+function drawPlayer() {
+  ctx.fillStyle = '#4ba3ff';
+  ctx.fillRect(gameState.player.x, gameState.player.y, gameState.player.width, gameState.player.height);
 
   ctx.fillStyle = '#ffffff';
-  ctx.font = '12px Arial';
-  ctx.fillText('Тюня', x - 2, y - 6);
+  ctx.fillRect(gameState.player.x + 5, gameState.player.y + 5, 5, 5);
+  ctx.fillRect(gameState.player.x + 14, gameState.player.y + 5, 5, 5);
+}
+
+function drawZombies() {
+  ctx.fillStyle = '#8cd15f';
+  for (const zombie of gameState.zombies) {
+    ctx.fillRect(zombie.x, zombie.y, zombie.width, zombie.height);
+  }
 }
 
 function drawBullets() {
+  ctx.fillStyle = '#ffcb3d';
   for (const bullet of gameState.bullets) {
-    ctx.fillStyle = '#ffd65a';
     ctx.fillRect(bullet.x, bullet.y, bullet.width, bullet.height);
-  }
-}
-
-function drawPauseOverlay() {
-  ctx.fillStyle = 'rgba(18, 24, 36, 0.45)';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = '#ffffff';
-  ctx.font = '24px Arial';
-  ctx.fillText('Пауза', canvas.width / 2 - 45, canvas.height / 2);
-function drawZombies() {
-  for (const zombie of gameState.zombies) {
-    ctx.fillStyle = '#7ce38b';
-    ctx.fillRect(zombie.x, zombie.y, zombie.width, zombie.height);
-
-    ctx.fillStyle = '#1f2230';
-    ctx.fillRect(zombie.x + 4, zombie.y + 5, 3, 3);
-    ctx.fillRect(zombie.x + 12, zombie.y + 5, 3, 3);
   }
 }
 
 function drawHitEffects() {
   for (const effect of gameState.hitEffects) {
-    const size = 12 * effect.life;
-    ctx.fillStyle = 'rgba(255, 235, 150, 0.8)';
-    ctx.fillRect(effect.x - size / 2, effect.y - size / 2, size, size);
+    ctx.fillStyle = 'rgba(255, 120, 120, 0.8)';
+    ctx.beginPath();
+    ctx.arc(effect.x, effect.y, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
-}
-
-function gameLoop(currentTime) {
-  if (!gameState.running) {
-    draw();
-    return;
-  }
-
-  const deltaTime = (currentTime - gameState.lastTime) / 1000;
-  gameState.lastTime = currentTime;
-
-  if (!gameState.paused) {
-    update(deltaTime);
-  }
-
-  draw();
-  requestAnimationFrame(gameLoop);
 }
 
 function handleKeyDown(event) {
@@ -849,8 +685,6 @@ function handleKeyDown(event) {
   keys[key] = true;
 
   if (key === 'e') {
-    event.preventDefault();
-
     if (gameState.craftingOpen) {
       closeCraftingMenu();
     } else {
@@ -858,12 +692,12 @@ function handleKeyDown(event) {
     }
   }
 
-  if (event.code === 'Space') {
+  if (key === ' ') {
     event.preventDefault();
     shoot();
-  keys[event.key.toLowerCase()] = true;
+  }
 
-  if (event.key.toLowerCase() === 'p') {
+  if (key === 'p') {
     togglePause();
   }
 }
@@ -873,11 +707,13 @@ function handleKeyUp(event) {
 }
 
 startButton.addEventListener('click', startGame);
+pauseButton.addEventListener('click', togglePause);
+restartButton.addEventListener('click', restartGame);
 craftWorkbenchButton.addEventListener('click', craftWorkbench);
 craftGunButton.addEventListener('click', craftGun);
 craftAmmoButton.addEventListener('click', craftAmmo);
 craftCloseButton.addEventListener('click', closeCraftingMenu);
-pauseButton.addEventListener('click', togglePause);
-restartButton.addEventListener('click', restartGame);
-window.addEventListener('keydown', handleKeyDown);
-window.addEventListener('keyup', handleKeyUp);
+document.addEventListener('keydown', handleKeyDown);
+document.addEventListener('keyup', handleKeyUp);
+
+updateHud();
