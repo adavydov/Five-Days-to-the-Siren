@@ -59,13 +59,28 @@ const gameState = {
 
 function createResourceNodes() {
   return [
-    { type: 'wood', x: 80, y: 55, width: 20, height: 20, active: true },
-    { type: 'wood', x: 220, y: 78, width: 20, height: 20, active: true },
-    { type: 'wood', x: 330, y: 40, width: 20, height: 20, active: true },
-    { type: 'food', x: 500, y: 270, width: 20, height: 20, active: true },
-    { type: 'food', x: 575, y: 320, width: 20, height: 20, active: true },
-    { type: 'metal', x: 380, y: 300, width: 20, height: 20, active: true },
-    { type: 'metal', x: 220, y: 330, width: 20, height: 20, active: true },
+    // Лес: дерево (6)
+    { type: 'wood', x: 70, y: 36, width: 20, height: 20, active: true },
+    { type: 'wood', x: 140, y: 86, width: 20, height: 20, active: true },
+    { type: 'wood', x: 220, y: 48, width: 20, height: 20, active: true },
+    { type: 'wood', x: 300, y: 94, width: 20, height: 20, active: true },
+    { type: 'wood', x: 380, y: 40, width: 20, height: 20, active: true },
+    { type: 'wood', x: 520, y: 82, width: 20, height: 20, active: true },
+
+    // Деревня: еда (4)
+    { type: 'food', x: 458, y: 236, width: 20, height: 20, active: true },
+    { type: 'food', x: 522, y: 300, width: 20, height: 20, active: true },
+    { type: 'food', x: 592, y: 250, width: 20, height: 20, active: true },
+    { type: 'food', x: 560, y: 340, width: 20, height: 20, active: true },
+
+    // Металл: деревня + рядом с бункером (7)
+    { type: 'metal', x: 470, y: 332, width: 20, height: 20, active: true },
+    { type: 'metal', x: 605, y: 286, width: 20, height: 20, active: true },
+    { type: 'metal', x: 445, y: 266, width: 20, height: 20, active: true },
+    { type: 'metal', x: 340, y: 320, width: 20, height: 20, active: true },
+    { type: 'metal', x: 248, y: 288, width: 20, height: 20, active: true },
+    { type: 'metal', x: 210, y: 360, width: 20, height: 20, active: true },
+    { type: 'metal', x: 390, y: 358, width: 20, height: 20, active: true },
   ];
 }
 
