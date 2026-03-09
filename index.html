@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Пять дней до Сирены</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <section id="start-screen" class="panel">
+        <h1>Пять дней до Сирены</h1>
+        <p>Помоги Тюне подготовиться до пятого дня.</p>
+        <button id="start-button" type="button">Играть</button>
+      </section>
+
+      <section id="game-screen" class="hidden">
+        <header class="hud">
+          <p>День: <span id="day-counter">1</span> / 5</p>
+          <p>Управление: WASD или стрелки</p>
+        </header>
+        <canvas id="game-canvas" width="640" height="400" aria-label="Игровое поле"></canvas>
+      </section>
+    </main>
+
+    <script src="game.js"></script>
+  </body>
+</html>
